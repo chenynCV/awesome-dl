@@ -77,7 +77,7 @@ class Conv2D(Module):
         rowW = kernelSize[0] * kernelSize[1]*inputDim
         colW = outputDim
         self.weight = np.random.normal(
-            0, 1./np.sqrt(inputDim), size=(rowW, colW))
+            0, 1./np.sqrt(rowW), size=(rowW, colW))
         self.grad = None
 
     def outShape(self, x):
@@ -125,7 +125,6 @@ class Conv2D(Module):
     def backward(self, delta, lr):
         N, C, H, W = delta.shape
         delta = delta.reshape((N, C, H*W)).transpose((0, 2, 1))
-        self.grad = 0
         self.grad = self.x_.transpose((0, 2, 1)) @ delta
         self.grad = np.mean(self.grad, axis=0)
         self.weight -= lr * self.grad

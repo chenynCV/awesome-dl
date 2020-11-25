@@ -7,12 +7,14 @@ from loss import CrossEntropyWithSoftMax
 class Model(Module):
     def __init__(self, inDim, outDim):
         super(Model, self).__init__()
-        self.conv1 = Conv2D(1, 32, stride=2)
+        self.conv1 = Conv2D(1, 128, stride=2)
         self.relu1 = F.Relu()
-        self.conv2 = Conv2D(32, 16, stride=2)
+        self.conv2 = Conv2D(128, 128, stride=2)
         self.relu2 = F.Relu()
+        self.conv3 = Conv2D(128, 128, stride=2)
+        self.relu3 = F.Relu()
         self.pool = F.GlobalMeanPooling()
-        self.fc = FulllyConnect(16, outDim)
+        self.fc = FulllyConnect(128, outDim)
         self.softmax = F.SoftMax()
         self.dropout = Dropout(prob=0.5)
         self.loss = CrossEntropyWithSoftMax()
@@ -22,6 +24,8 @@ class Model(Module):
         x = self.relu1(x)
         x = self.conv2(x)
         x = self.relu2(x)
+        x = self.conv3(x)
+        x = self.relu3(x)
         x = self.pool(x)
         x = self.fc(x)
         if y is not None:
@@ -36,11 +40,13 @@ class Model(Module):
         deltaFc = self.dropout.backward() * self.loss.backward()
 
         # BP2
-        deltaConv2 = self.relu2.backward() * self.pool.backward(self.fc.res(deltaFc))
+        deltaConv3 = self.relu3.backward() * self.pool.backward(self.fc.res(deltaFc))
+        deltaConv2 = self.relu2.backward() * self.conv3.res(deltaConv3)
         deltaConv1 = self.relu1.backward() * self.conv2.res(deltaConv2)
 
         # BP3-BP4
         self.fc.backward(deltaFc, lr)
+        self.conv3.backward(deltaConv3, lr)
         self.conv2.backward(deltaConv2, lr)
         self.conv1.backward(deltaConv1, lr)
 

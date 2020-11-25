@@ -5,7 +5,7 @@ from dataset import Dataset, DataLoader
 
 if __name__ == '__main__':
     trainDs = Dataset('./mnist.pkl.gz', classNum=10, split='train')
-    trainDataLoader = DataLoader(trainDs, batch=128)
+    trainDataLoader = DataLoader(trainDs, batch=128, shuffle=True)
 
     valDs= Dataset('./mnist.pkl.gz', classNum=10, split='val')
     valDataLoader = DataLoader(valDs, batch=128)
@@ -15,7 +15,7 @@ if __name__ == '__main__':
         model.train()
         for step, (X, Y) in enumerate(trainDataLoader):
             Y_, loss = model(X, Y) 
-            model.optimize(lr=0.01)
+            model.optimize(lr=0.1)
             if step % 100 == 0:
                 print('epoch={}, step={}, loss={:.4f}'.format(epoch, step, np.mean(loss)))
             pass
