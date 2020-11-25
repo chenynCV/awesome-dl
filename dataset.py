@@ -13,13 +13,13 @@ class Dataset:
         with gzip.open(dataPath, 'rb') as f:
             trainData, valData, testData = pkl.load(f, encoding='bytes')
         if self.split == 'train':
-            X = [np.reshape(x, -1) for x in trainData[0]]
+            X = [np.reshape(x, (1, 28, 28)) for x in trainData[0]]
             Y = [self.oneHot(y) for y in trainData[1]]
         elif self.split == 'val':
-            X = [np.reshape(x, -1) for x in valData[0]]
+            X = [np.reshape(x, (1, 28, 28)) for x in valData[0]]
             Y = valData[1]
         elif self.split == 'test':
-            X = [np.reshape(x, -1) for x in testData[0]]
+            X = [np.reshape(x, (1, 28, 28)) for x in testData[0]]
             Y = testData[1]
         else:
             raise NotImplementedError

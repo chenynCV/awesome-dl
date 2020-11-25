@@ -51,3 +51,21 @@ class SoftMax(Function):
         ex = np.exp(x - x.max())
         a = ex / np.sum(ex, axis=1, keepdims=True)
         return a
+
+
+class GlobalMeanPooling(Function):
+    def __init__(self):
+        super(GlobalMeanPooling, self).__init__()
+        self.grad = None
+
+    def forward(self, x):
+        self.x = x
+        a = x.mean(axis=-1).max(axis=-1)
+        return a
+
+    def backward(self, delta=None):
+        N, C, H, W = self.x.shape
+        self.grad = np.ones((N, C, H, W)) / (H*W)
+        if delta is not None:
+            self.grad *= delta.reshape((N, C, 1, 1))
+        return self.grad

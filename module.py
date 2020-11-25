@@ -21,21 +21,25 @@ class Module:
 class FulllyConnect(Module):
     def __init__(self, inputDim, outputDim):
         super(FulllyConnect, self).__init__()
-        self.W = np.random.normal(
+        self.weight = np.random.normal(
             0, 1./np.sqrt(inputDim+1), size=(outputDim, inputDim+1))
         self.grad = None
 
     def forward(self, x):
         x = np.hstack((x, np.ones((x.shape[0], 1))))
         self.x = x
-        z = x @ self.W.T
+        z = x @ self.weight.T
         return z
 
     def backward(self, delta, lr):
         N = delta.shape[0]
         self.grad = delta.T @ self.x / N
-        self.W -= lr * self.grad
+        self.weight -= lr * self.grad
         return self.grad
+
+    def res(self, delta):
+        res = delta @ self.weight[:, :-1]
+        return res
 
 
 class Dropout(Module):
@@ -62,6 +66,7 @@ class Conv2D(Module):
     """
     The tensor are arranged in (N, C, H, W) order.
     """
+
     def __init__(self, inputDim, outputDim, kernelSize=(3, 3), stride=1):
         super(Conv2D, self).__init__()
         self.inputDim = inputDim
@@ -83,8 +88,8 @@ class Conv2D(Module):
         return int(Oh), int(Ow)
 
     def forward(self, x):
-        N, C, H, W = x.shape
-        Oh, Ow = self.outShape(x)
+        self.inputShape = (N, C, H, W) = x.shape
+        self.outputShape = (Oh, Ow) = self.outShape(x)
         self.x_ = self.unrolling(x)
         x = self.x_ @ self.weight
         x = x.reshape((N, Oh, Ow, self.outputDim))
@@ -93,22 +98,44 @@ class Conv2D(Module):
 
     def unrolling(self, x):
         kw, kh = self.kernelSize
-        N, C, H, W = x.shape
-        Oh, Ow = self.outShape(x)
-        
+        N, C, H, W = self.inputShape
+        Oh, Ow = self.outputShape
+
         MX = np.zeros((N, Oh*Ow, kw*kh*C))
-        index = 0
-        for h in range(0, H-kh+1, self.stride):
-            for w in range(0, W-kw+1, self.stride):
-                subX = x[:, :, h:h+kh, w:w+kw].reshape(N, -1)
+        for h_ in range(0, H-kh+1, self.stride):
+            for w_ in range(0, W-kw+1, self.stride):
+                index = h_//self.stride*Ow + w_//self.stride
+                subX = x[:, :, h_:h_+kh, w_:w_+kw].reshape(N, -1)
                 MX[:, index, :] = subX
         return MX
 
+    def rolling(self, MX):
+        kw, kh = self.kernelSize
+        N, C, H, W = self.inputShape
+        Oh, Ow = self.outputShape
+
+        X = np.zeros((N, C, H, W))
+        for h_ in range(0, H-kh+1, self.stride):
+            for w_ in range(0, W-kw+1, self.stride):
+                index = h_//self.stride*Ow + w_//self.stride
+                subX = MX[:, index, :]
+                X[:, :, h_:h_+kh, w_:w_+kw] = subX.reshape((N, C, kw, kh))
+        return X
+
     def backward(self, delta, lr):
-        N = delta.shape[0]
-        self.grad = delta.T @ self.x_ / N
+        N, C, H, W = delta.shape
+        delta = delta.reshape((N, C, H*W)).transpose((0, 2, 1))
+        self.grad = 0
+        self.grad = self.x_.transpose((0, 2, 1)) @ delta
+        self.grad = np.mean(self.grad, axis=0)
         self.weight -= lr * self.grad
         return self.grad
+
+    def res(self, delta):
+        N, C, H, W = delta.shape
+        delta = delta.reshape((N, C, H*W)).transpose((0, 2, 1))
+        res = delta @ self.weight.T
+        return self.rolling(res)
 
 
 if __name__ == '__main__':

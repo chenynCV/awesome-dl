@@ -10,13 +10,13 @@ if __name__ == '__main__':
     valDs= Dataset('./mnist.pkl.gz', classNum=10, split='val')
     valDataLoader = DataLoader(valDs, batch=128)
 
-    model = Model(inDim=784, outDim=10)
+    model = Model(inDim=(28, 28), outDim=10)
     for epoch in range(10000):
         model.train()
         for step, (X, Y) in enumerate(trainDataLoader):
             Y_, loss = model(X, Y) 
-            model.optimize(lr=0.1)
-            if step % 1000 == 0:
+            model.optimize(lr=0.01)
+            if step % 100 == 0:
                 print('epoch={}, step={}, loss={:.4f}'.format(epoch, step, np.mean(loss)))
             pass
 
